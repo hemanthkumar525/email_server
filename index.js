@@ -18,7 +18,7 @@ const sheets = google.sheets({ version: 'v4', auth });
 
 // --- Google Gemini API Setup ---
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 // --- API Endpoint ---
 app.post('/api/generate', async (req, res) => {
