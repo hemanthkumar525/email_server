@@ -2,21 +2,29 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const path = require('path');
 const { google } = require('googleapis');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- Google Sheets API Setup ---
-const auth = new google.auth.GoogleAuth({
-  keyFile:
-    process.env.GOOGLE_APPLICATION_CREDENTIALS ||
-    path.join(__dirname, 'credentials.json'), // Local fallback
-  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-});
+// --- Google Sheets API Setup (Fixed for Render + OpenSSL 3) ---
+const keyPath =
+  process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+  path.join(__dirname, 'credentials.json');
+
+const credentials = JSON.parse(fs.readFileSync(keyPath, 'utf-8'));
+
+const auth = new google.auth.JWT(
+  credentials.client_email,
+  null,
+  credentials.private_key,
+  ['https://www.googleapis.com/auth/spreadsheets']
+);
+
 const sheets = google.sheets({ version: 'v4', auth });
 
 // --- Google Gemini API Setup ---
@@ -37,15 +45,14 @@ app.post('/api/generate', async (req, res) => {
       first, create a prioritized "Plan for Today" in a logical order.
       Second, using that plan, draft a professional and concise work update email template.
       The email should be ready to be copied and sent.
-      
+
       Separate the plan and the email with "---EMAIL---".
-      
+
       Tasks:
       ${tasks}`;
 
     const result = await model.generateContent(prompt);
     const responseText = await result.response.text();
-
     const [plan, email] = responseText.split('---EMAIL---');
 
     // 2. Log the data to Google Sheets
